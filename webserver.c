@@ -48,12 +48,19 @@ int main(int argc,char* argv[]){
 	}
 
 	fprintf(stderr,"create socket ok! port= %d , father pid = %d\n ",server_port,getpid());
-	
+
+	if(chdir(WORK_DIR)==-1){
+		fprintf(stderr,"no work directory!!!\n");
+		exit(1);
+	}
+
+#ifndef DEBUG
 	if(!~create_daemon()){
 		//创建守护进程失败！
 		exit(2);
 	}
 	//成为守护进程......
+#endif
 
 	work(server_sockfd); //开始处理请求
 
@@ -115,9 +122,12 @@ void work(int server_sockfd){
 		if((ac_sockfd=accept(server_sockfd,(struct sockaddr*)&ac_sockaddr,&addr_size))==-1)continue;
 		pid_t pid=fork();
 		if(pid==0){//子进程
-			int len=recv(ac_sockfd,buf,BUF_SIZE,0);
-			int ans=handle_request(buf);
-			send(ac_sockfd,buf,ans,0);
+			int len;
+			while( len=recv(ac_sockfd,buf,BUF_SIZE,0) ){
+				buf[len]=0;
+				int ans=handle_request(buf);
+				send(ac_sockfd,buf,ans,0);
+			}
 			close(ac_sockfd);
 			exit(0);
 		}

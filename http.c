@@ -21,7 +21,7 @@ int get_head(unsigned char* buf,int content_len);//将生成的响应头保存�
 
 int parse_request(unsigned char* buf);//将http的请求解析出来,如果解析错误或者是不支持,就返回-1
 
-void print_dir(char* dir,int* len);//递归访问所有目录
+void print_dir(char* pre_dir,int pre_len,char* dir,int* len);//递归访问所有目录
 
 
 int handle_request(unsigned char* buf){//处理http请求，生成http的response
@@ -60,7 +60,8 @@ int handle_request(unsigned char* buf){//处理http请求，生成http的respons
 	}
 #ifdef DEBUG
 	fprintf(stderr,"response:\n");
-	for(int i=0;i<len;++i)fprintf(stderr,"%c",buf[i]);
+	if(len>1000)for(int i=0;i<1000;++i)fprintf(stderr,"%c",buf[i]);
+	else for(int i=0;i<len;++i)fprintf(stderr,"%c",buf[i]);
 	fprintf(stderr,"\n");
 #endif
 	return len;//返回总长度
@@ -114,13 +115,17 @@ int get_head(unsigned char* buf,int content_len){//将生成的响应头保存�
 
 int get_content(FILE* fp){//得到返回内容
 	if(fp)return fread(content,sizeof(unsigned char),BUF_SIZE,fp);
-	int len=0;
-	print_dir(".",&len);
+	fp=fopen("template.html","rb");
+	if(fp==NULL)return 0;//template.html被删除了！！
+	int len=fread(content,sizeof(unsigned char),BUF_SIZE,fp);
+	static char dir_pre[256];
+	print_dir(dir_pre,0,".",&len);
 	chdir(WORK_DIR);
-	return len;
+	strcpy(content+len,"</ul></body></html>");
+	return len+19;
 }
 
-void print_dir(char* dir,int* len){//递归访问所有目录
+void print_dir(char* dir_pre,int pre_len,char* dir,int* len){//递归访问所有目录
 	struct dirent* x;
 	DIR* dir_point=opendir(dir);
 	if(dir_point==NULL){
@@ -130,22 +135,19 @@ void print_dir(char* dir,int* len){//递归访问所有目录
 	while(x=readdir(dir_point)){//遍历这个文件夹的内容
 		//如果是上一级或者上上级,则跳过
 		if(strcmp(x->d_name,".")==0 || strcmp(x->d_name,"..")==0)continue;
-		int d_len=strlen(x->d_name);
-		for(int i=0;i<d_len;++i)content[(*len)++]=x->d_name[i];
+
 		if(x->d_type==DT_DIR){//文件夹就继续递归
-			content[(*len)]='[';
-			content[(*len)+1]='D';
-			content[(*len)+2]=']';
-			content[(*len)+3]=' ';
-			*len += 4;
-			print_dir(x->d_name,len);
+			sprintf(content+*len,"<li>%s[folder]</li>",x->d_name);
+			*len += strlen(content+*len);
+			
+			dir_pre[pre_len]='/';
+			strcpy(dir_pre+pre_len+1,x->d_name);
+			print_dir(dir_pre,pre_len+1+strlen(x->d_name),x->d_name,len);
+			dir_pre[pre_len]='\0';
 		}
 		else if(x->d_type==DT_REG){//实体文件
-			content[(*len)]='[';
-			content[(*len)+1]='F';
-			content[(*len)+2]=']';
-			content[(*len)+3]=' ';
-			*len += 4;
+			sprintf(content+*len,"<li><a href=\"%s/%s\" target=\"_blank\">%s[file]</a></li>",dir_pre,x->d_name,x->d_name);
+			*len += strlen(content+*len);
 		}
 	}
 	chdir("..");

@@ -8,6 +8,7 @@
 #include<sys/types.h>
 #include<sys/wait.h>
 #include<sys/stat.h>
+#include<signal.h>
 #include<fcntl.h>
 #include "http.h"
 
@@ -113,7 +114,13 @@ int create_socket(int server_port){//创建服务器的socketfd
 	return server_sockfd;
 }
 
+
+void wait_son(int sig){//子进程退出的时候,清理子进程
+	wait(NULL);
+}
+
 void work(int server_sockfd){
+	signal(SIGCHLD,wait_son);
 	static unsigned char buf[BUF_SIZE];
 	struct sockaddr_in ac_sockaddr;
 	socklen_t addr_size=sizeof(ac_sockaddr);
@@ -134,8 +141,6 @@ void work(int server_sockfd){
 		else if(pid==-1){//生成子进程出错
 			close(ac_sockfd);
 		}
-		waitpid(-1,NULL,WNOHANG);
-		//如果父进程,直接忽略进入下一次循环接受请求
 	}
 }
 

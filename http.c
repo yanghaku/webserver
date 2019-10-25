@@ -23,6 +23,7 @@ int parse_request(unsigned char* buf);//将http的请求解析出来,如果解�
 
 void print_dir(char* pre_dir,int pre_len,char* dir,int* len);//递归访问所有目录
 
+void run_process(int url_len); //运行指定的程序,并将结果保存在run/tmp{pid}.out中 (url的长度传过去,减少一次重复计算)
 
 int handle_request(unsigned char* buf){//处理http请求，生成http的response
 #ifdef DEBUG
@@ -40,7 +41,16 @@ int handle_request(unsigned char* buf){//处理http请求，生成http的respons
 		fp=fopen("503.html","rb");
 	}
 	else if(request.url[0]!='\0'){//即url不为空的时候
-		fp=fopen(request.url,"rb");
+		int url_len=strlen(request.url);
+		if(url_len>=4 && request.url[url_len-4]=='.' && request.url[url_len-3]=='r' && 
+					request.url[url_len-2]=='u' && request.url[url_len-1]=='n'){//run!
+			sprintf(content,"run/tmp%d.out",getpid());//在调用getcontent之前,content还未使用,所以这里构造的时候利用content作为buffer
+			run_process(url_len);
+			fp=fopen(content,"rb");//运行的程序结果保存在tmp.out中
+		}
+		else{//正常尝试打开文件
+			fp=fopen(request.url,"rb");
+		}
 		if(fp==NULL){//没有对应的文件的时候返回404
 			fp=fopen("404.html","rb");
 			response.status=404;
@@ -122,6 +132,7 @@ int get_content(FILE* fp){//得到返回内容
 	print_dir(dir_pre,0,".",&len);
 	chdir(WORK_DIR);
 	strcpy(content+len,"</ul></body></html>");
+	fclose(fp);
 	return len+19;
 }
 
@@ -155,4 +166,19 @@ void print_dir(char* dir_pre,int pre_len,char* dir,int* len){//递归访问所�
 }
 
 
+void run_process(int url_len){
+	/* 
+	   在这个时候,解析出的url往后不会再用到了,所以构造命令的时候,直接选择url的后面未用到的空间来做buffer
+	 */
+#ifdef DEBUG
+	system(request.url);
+#endif
+
+	sprintf(request.url+url_len," 2> %s 1>&2",content);
+
+#ifdef DEBUG
+	fprintf(stderr,"run: %s\n",request.url);
+#endif
+	system(request.url);
+}
 

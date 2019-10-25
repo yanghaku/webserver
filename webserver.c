@@ -116,6 +116,7 @@ int create_socket(int server_port){//创建服务器的socketfd
 
 
 void wait_son(int sig){//子进程退出的时候,清理子进程
+	fprintf(stderr,"wait : %d",getpid());
 	wait(NULL);
 }
 
@@ -130,7 +131,7 @@ void work(int server_sockfd){
 		pid_t pid=fork();
 		if(pid==0){//子进程
 			int len;
-			while( len=recv(ac_sockfd,buf,BUF_SIZE,0) ){
+			while( ( len=recv(ac_sockfd,buf,BUF_SIZE,0) ) ){
 				buf[len]=0;
 				int ans=handle_request(buf);
 				send(ac_sockfd,buf,ans,0);

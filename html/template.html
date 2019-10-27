@@ -1,16 +1,29 @@
 <!Doctype html>
 <html>
 	<head>
-		<meta http-equiv=Content-Type content="text/html;charset=utf-8">
-		<link rel="stylesheet" type="text/css" href="test.css"/>
-		<script src="test.js" ></script>
 		<title>Hello World!</title>
+		<meta http-equiv=Content-Type content="text/html;charset=utf-8">
+		<link rel="stylesheet" href="css/bootstrap.min.css" />
+		<link rel="stylesheet" href="css/bootstrap-treeview.min.css" />
+		<script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+		<script type="text/javascript" src="js/bootstrap.min.js" ></script>
+		<script type="text/javascript" src="js/bootstrap-treeview.min.js" ></script>
 	</head>
 	<body>
-	<h1> hello world! </h1>
-	<h1> welcome to the new web server </h1>
-	<h1> server name yb </h1>
-	<h2> this is the file in this server </h1>
-
-	<ul>
-
+		<h1 style="text-align: center"> hello world! </h1>
+		<h1 style="text-align: center"> welcome to the new web server </h1>
+		<h1 style="text-align: center"> server name yb </h1>
+		<h2> this is the file in this server </h1>
+	
+		<div id="treeview">
+		</div>
+	 	<script type="text/javascript">
+  		$('#treeview').treeview({
+		    bootstrap2: false, 
+        	showTags: true,
+        	levels: 5,
+        	color: "rgb(31, 140, 26)",
+        	enableLinks: true,
+        	emptyIcon: "glyphicon glyphicon-file",
+        	expandIcon: "glyphicon glyphicon-folder-open",
+        	data: 

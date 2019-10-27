@@ -77,6 +77,7 @@ int create_daemon(){//创建守护进程
 		return -1;
 	}
 	if(pid>0){//父进程运行到这里就停止
+		fprintf(stderr,"the main pid is: %d\n",pid);
 		exit(0);
 	}
 	//fprintf(stderr,"create daemon successful! the son pid= %d\n\n",getpid());
@@ -116,7 +117,9 @@ int create_socket(int server_port){//创建服务器的socketfd
 
 
 void wait_son(int sig){//子进程退出的时候,清理子进程
+#ifdef DEBUG
 	fprintf(stderr,"wait : %d",getpid());
+#endif
 	wait(NULL);
 }
 

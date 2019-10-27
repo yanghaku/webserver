@@ -74,8 +74,10 @@ int handle_request(unsigned char* buf){//处理http请求，生成http的respons
 	else for(int i=0;i<len;++i)fprintf(stderr,"%c",buf[i]);
 	fprintf(stderr,"\n");
 #endif
+	// 如果运行了文件,就将生成的临时文件删除
+	sprintf(content,"run/tmp%d.out",getpid());
+	if(access(content,F_OK)==0)remove(content);
 	return len;//返回总长度
-
 }
 
 
@@ -131,9 +133,9 @@ int get_content(FILE* fp){//得到返回内容
 	static char dir_pre[256];
 	print_dir(dir_pre,0,".",&len);
 	chdir(WORK_DIR);
-	strcpy(content+len,"</ul></body></html>");
+	strcpy(content+len,"});</script></body></html>");
 	fclose(fp);
-	return len+19;
+	return len+26;
 }
 
 void print_dir(char* dir_pre,int pre_len,char* dir,int* len){//递归访问所有目录
@@ -142,27 +144,32 @@ void print_dir(char* dir_pre,int pre_len,char* dir,int* len){//递归访问所�
 	if(dir_point==NULL){
 		return;//打不开这个文件夹(可能没有权限之类的),直接退出
 	}
+	content[(*len)++]='[';//当前层js数组的左括号
 	chdir(dir);
 	while(x=readdir(dir_point)){//遍历这个文件夹的内容
 		//如果是上一级或者上上级,则跳过
 		if(strcmp(x->d_name,".")==0 || strcmp(x->d_name,"..")==0)continue;
 
 		if(x->d_type==DT_DIR){//文件夹就继续递归
-			sprintf(content+*len,"<li>%s[folder]</li>",x->d_name);
+			sprintf(content+*len,"{text:\"%s\",tags:[\"folder\"],nodes:",x->d_name);
 			*len += strlen(content+*len);
 			
 			dir_pre[pre_len]='/';
 			strcpy(dir_pre+pre_len+1,x->d_name);
 			print_dir(dir_pre,pre_len+1+strlen(x->d_name),x->d_name,len);
 			dir_pre[pre_len]='\0';
+
+			content[(*len)++]='}';
+			content[(*len)++]=',';
 		}
 		else if(x->d_type==DT_REG){//实体文件
-			sprintf(content+*len,"<li><a href=\"%s/%s\" target=\"_blank\">%s[file]</a></li>",dir_pre,x->d_name,x->d_name);
+			sprintf(content+*len,"{text:\"%s\",tags:[\"file\"],href:\"%s/%s\"},",x->d_name,dir_pre,x->d_name);
 			*len += strlen(content+*len);
 		}
 	}
 	chdir("..");
 	closedir(dir_point);
+	content[(*len)++]=']';//当前层js数组的右括号
 }
 
 

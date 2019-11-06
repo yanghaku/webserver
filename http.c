@@ -3,6 +3,7 @@
 #include<stdio.h>
 #include<time.h>
 #include<dirent.h>
+#include<syslog.h>
 #include<unistd.h>
 
 
@@ -24,6 +25,8 @@ int parse_request(unsigned char* buf);//将http的请求解析出来,如果解�
 void print_dir(char* pre_dir,int pre_len,char* dir,int* len);//递归访问所有目录
 
 void run_process(int url_len); //运行指定的程序,并将结果保存在run/tmp{pid}.out中 (url的长度传过去,减少一次重复计算)
+
+void write_log();//记录日志
 
 int handle_request(unsigned char* buf){//处理http请求，生成http的response
 #ifdef DEBUG
@@ -77,12 +80,14 @@ int handle_request(unsigned char* buf){//处理http请求，生成http的respons
 	// 如果运行了文件,就将生成的临时文件删除
 	sprintf(content,"run/tmp%d.out",getpid());
 	if(access(content,F_OK)==0)remove(content);
+	write_log();
 	return len;//返回总长度
 }
 
 
 int parse_request(unsigned char* buf){//将http的请求解析出来,如果解析错误或者是不支持,就返回-1
 	if( !( buf[0]=='G' && buf[1]=='E' && buf[2]=='T'))return -1;
+	request.method=GET;
 	for(int i=0;buf[i];++i){
 		if(buf[i]=='/'){
 			if(buf[i+1]==' ')request.url[0]='\0';
@@ -174,18 +179,26 @@ void print_dir(char* dir_pre,int pre_len,char* dir,int* len){//递归访问所�
 
 
 void run_process(int url_len){
-	/* 
-	   在这个时候,解析出的url往后不会再用到了,所以构造命令的时候,直接选择url的后面未用到的空间来做buffer
-	 */
+	static char commend[URL_MAX_LEN+10];
 #ifdef DEBUG
 	system(request.url);
 #endif
-
-	sprintf(request.url+url_len," 2> %s 1>&2",content);
+	strcpy(commend,request.url);
+	sprintf(commend+url_len," 2> %s 1>&2",content);
 
 #ifdef DEBUG
-	fprintf(stderr,"run: %s\n",request.url);
+	fprintf(stderr,"run: %s\n",commend);
 #endif
-	system(request.url);
+	system(commend);
 }
 
+void write_log(){
+	/** 记录日志 */
+	static char method[20];
+	if(request.method==GET)strcpy(method,"GET");
+	else if(request.method==POST)strcpy(method,"POST");
+	else strcpy(method,"Unknown");
+	openlog("webserver_YB",LOG_CONS | LOG_PID , 0);
+	syslog(LOG_DEBUG ," method: %s  url: %s  response code: %d \n",method,request.url,response.status);
+	closelog();
+}
